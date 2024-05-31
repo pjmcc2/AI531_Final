@@ -1,7 +1,8 @@
 import pickle
 import numpy as np
 import random
-
+import string
+from numpy.random import default_rng
 
 def get_words(file):
     with open(file, "rb") as f:
@@ -31,7 +32,7 @@ def insert_word(array, word, position, direction):
     return array
 
 
-def score_encode(array, dict):
+def score_encode(array, dict): # TODO change this to "find largest word in list (row or col)" but also don't let letters be double counted
     # horizontal first
     valid = True
     word_score = 0
@@ -53,9 +54,11 @@ def score_encode(array, dict):
                 curr_word = curr_word + array[i, j]
                 if (i, j) not in seen:
                     letter_count += 1
-
-            elif len(curr_word) > 1:
+            if len(curr_word) > 1:
                 if curr_word in dict:
+                    if j + 1 < len(array):
+                        if curr_word + array[(i,j+1)] in dict:
+                            continue
                     word_score += 1
                     letter_score += letter_count
                     letter_count = 0
@@ -78,8 +81,12 @@ def score_encode(array, dict):
                 if (j, i) not in seen:
                     letter_count += 1
 
-            elif len(curr_word) > 1:
+            if len(curr_word) > 1:
                 if curr_word in dict:
+                    if curr_word in dict:
+                        if j + 1 < len(array):
+                            if curr_word + array[(j+1,i)] in dict:
+                                continue
                     word_score += 1
                     letter_score += letter_count
                     letter_count = 0
@@ -115,6 +122,8 @@ def crossover(array1, array2):
             break
     if cross2 is None:
         cross2 = random.sample(g2, 1)
+    g2.append(cross1)
+    g1.append(cross2)
 
 
 def word_positions(word, position, direction):
@@ -147,9 +156,40 @@ def check_conflict(existing_triples, new_triple):
 # With probability M mutation occurs. mutation is performed in 3 ways, with probability p and (1-p) The primary way, with probability p assigns all
 # blank cells a random letter. This encourages small (2-3) letter words to form which are common in crosswords and will increase the number of real words.
 # With probablity (1-p)/2, an entirely new word will be sampled from the lexicon and randomly placed. And with prob: (1-p)/2 both previous ways happen sequentially
-def mutate(array, gene):
-    pass
+def mutate(array, gene,p, dict, seed=None,rng=None):
+    if rng is None:
+        rng = default_rng(seed)
+    sample = rng.uniform()
+    if sample < p:
+        array = saturate(array)
+        return array,gene
+    sample = rng.uniform()
+    word = random.sample(dict,1)
+    dir = random.sample(["h","v"],1)
+    pos1 = rng.integers(0,len(array)-len(word))
+    pos2 = rng.integers(0,len(array))
+    if dir == "v":
+        pos = (pos1,pos2)
+    else:
+        pos = (pos2,pos1)
+    if sample < 0.5:
+        gene.append((word,pos,dir))
+        return array,gene
+    else:
+        array = saturate(array)
+        gene.append((word,pos,dir))
+        return array,gene
 
+
+
+
+def saturate(array):
+    letters = list(string.ascii_lowercase)
+    for i in range(len(array)):
+        for j in range(len(array)):
+            if not isinstance(array[(i,j)],str):
+                array[(i,j)] = random.sample(letters,1)[0]
+    return array
 
 t = np.zeros((5, 5), dtype=object)
 t[0, 0] = "a"
@@ -157,7 +197,24 @@ t[1, 0] = "b"
 t[2, 0] = "i"
 
 t = insert_word(t, "test", (0, 1), "v")
+t = saturate(t)
 print(t)
-ws, ls, valid, state = score_encode(t, {"abi": 1, "test": 1, "at": 1, "be": 1, "is": 1})
+test_dict = {"test": 1, "at": 1, "be": 1, "is": 1,
+             "kiss": 1,
+             "could":1,
+             "sound":1
+
+}
+ws, ls, valid, state = score_encode(t, test_dict)
+print(f"Valid puzzle: {valid} Word score: {ws}, letter score: {ls}")
+print(state)
+
+h = np.zeros((5, 5), dtype=object)
+h = insert_word(h,"kiss",(0,1),"h")
+h = insert_word(h,"could",(4,0),"h")
+h = insert_word(h,"sound",(0,4),"v")
+h = saturate(h)
+print(h)
+ws, ls, valid, state = score_encode(h, test_dict)
 print(f"Valid puzzle: {valid} Word score: {ws}, letter score: {ls}")
 print(state)
