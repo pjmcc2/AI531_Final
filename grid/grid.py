@@ -18,15 +18,9 @@ class Grid():
                     curr.right = temp
                     curr = temp
 
-        def gen_col(self):
-            for i in range(1,self.size):
-                if curr.bot is None:
-                    temp = Cell(None,None,pos=curr.pos + self.size)
-                    curr.bot = temp
-                    curr = temp
         
 
 
     def set_word(self,word) -> None:
-
+        
         
