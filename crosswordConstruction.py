@@ -2,16 +2,17 @@ import pickle
 import numpy as np
 import random
 import string
+import json
 from numpy.random import default_rng
 
 def get_words(file):
     with open(file, "rb") as f:
-        word_list = pickle.load(f)
+        word_list = json.load(f)
     return word_list
 
 
 def filter_words(words, length):
-    return [w for w in words if (len(w) <= length) and (len(w) > 1)]
+    return {w:1 for w in words.keys() if (len(w) <= length) and (len(w) > 1)}
 
 
 def insert_word(array, word, position, direction):
@@ -32,98 +33,95 @@ def insert_word(array, word, position, direction):
     return array
 
 
-def score_encode(array, dict): # TODO change this to "find largest word in list (row or col)" but also don't let letters be double counted
-    # horizontal first
-    valid = True
-    word_score = 0
-    letter_score = 0
-    letter_count = 0
-    state = []
-    pos = None
-    word = ""
-    style = ""
+ 
+def encode_list(char_string, word_dict):
+    n = len(char_string)
+    strings = {}
+
+    # Step 1: Identify all substrings that are in the word dictionary
+    for i in range(n):
+        for j in range(i + 1, n + 1):
+            substring = char_string[i:j]
+            substring = "".join(substring)
+            if substring in word_dict:
+                strings[substring] = (i, j)
+
+    # Step 2: Sort the substrings by their length in descending order
+    sorted_strings = sorted(strings.items(), key=lambda x: len(x[0]), reverse=True)
+
+    # Step 3: Select non-overlapping and non-adjacent valid words
+    valid_words = []
+    used_indices = set()
+
+    for word, (start, end) in sorted_strings:
+        # Check if the word overlaps or is adjacent to any already selected words
+        if all(index not in used_indices for index in range(start, end)) and \
+           all(index - 1 not in used_indices and index + 1 not in used_indices for index in range(start, end)):
+            valid_words.append((word, (start, end)))
+            used_indices.update(range(start, end))
+
+    return valid_words
+
+
+def encode_v2(arr,word_dict):
+    encoding = []
+    for i,r in enumerate(arr):
+        temp = encode_list(r, word_dict)
+        for w,(start,end) in temp:
+            encoding.append((w,(i,start),'h'))
+    for j,c in enumerate(arr.T):
+        temp = encode_list(c, word_dict)
+        for w,(start,end) in temp:
+            encoding.append((w,(start,j),'v'))
+
+    return encoding
+    
+def score_gene(gene):
+
+
+    ws = 0
+    ls = 0
     seen = set()
-    for i in range(array.shape[0]):
-        curr_word = ""
-        letter_count = 0
-        style = "h"
-        for j in range(array.shape[0]):
-            if isinstance(array[i, j], str):
-                if len(curr_word) == 0:
-                    pos = (i, j)
-                curr_word = curr_word + array[i, j]
-                if (i, j) not in seen:
-                    letter_count += 1
-            if len(curr_word) > 1:
-                if curr_word in dict:
-                    if j + 1 < len(array):
-                        if curr_word + array[(i,j+1)] in dict:
-                            continue
-                    word_score += 1
-                    letter_score += letter_count
-                    letter_count = 0
-                    state.append((curr_word, pos, style))
-                    for k in range(len(curr_word)):
-                        seen.add((i, j - len(curr_word) + k))
-                else:
-                    valid = False
-                curr_word = ""
-
-    for i in range(array.shape[0]):
-        curr_word = ""
-        letter_count = 0
-        style = "v"
-        for j in range(array.shape[0]):
-            if isinstance(array[j, i], str):
-                if len(curr_word) == 0:
-                    pos = (j, i)
-                curr_word = curr_word + array[j, i]
-                if (j, i) not in seen:
-                    letter_count += 1
-
-            if len(curr_word) > 1:
-                if curr_word in dict:
-                    if curr_word in dict:
-                        if j + 1 < len(array):
-                            if curr_word + array[(j+1,i)] in dict:
-                                continue
-                    word_score += 1
-                    letter_score += letter_count
-                    letter_count = 0
-                    state.append((curr_word, pos, style))
-                    for k in range(len(curr_word)):
-                        seen.add((j - len(curr_word) + k, i))
-                else:
-                    valid = False
-                curr_word = ""
-    return word_score, letter_score, valid, state
-
+    for w,(i,j), style in gene:
+        ws += 1
+        if style == "h":
+            for k in range(len(w)):
+                if (i,j+k) not in seen:
+                    seen.add((i,j+k))
+                    ls += 1
+        else:
+            for k in range(len(w)):
+                if (i+k,j) not in seen:
+                    seen.add((i+k,j))
+                    ls += 1
+    return ws, ls
 
 # Crossover selects randomly  (without repetition) real words from array 1 and array 2: a sample is considered
 # Viable if there the corresponding location on the other array does not contain any valid words
 # If no viable words are found, a random inviable word is selected.
 # The new arrays are generated by overwriting whatever is at the other array's word location
-def crossover(array1, array2):
-    arr1, g1 = array1
-    arr2, g2 = array2
-    s1 = random.sample(g1, len(g1))
-    s2 = random.sample(g2, len(g2))
+def crossover(g1, g2,rng):
+
+    rng.shuffle(g1)
+    rng.shuffle(g2)
     cross1 = None
     cross2 = None
-    for s in s1:
+    for s in g1:
         if not check_conflict(g2, s):
             cross1 = s
             break
     if cross1 is None:
-        cross1 = random.sample(g1, 1)
-    for s in s2:
+        cross1 = g1[rng.integers(0,len(g1))]
+    for s in g2:
         if not check_conflict(g1, s):
             cross2 = s
             break
     if cross2 is None:
-        cross2 = random.sample(g2, 1)
+        cross2 = g2[rng.integers(0,len(g2))]
     g2.append(cross1)
     g1.append(cross2)
+
+    return g1, g2
 
 
 def word_positions(word, position, direction):
@@ -156,65 +154,88 @@ def check_conflict(existing_triples, new_triple):
 # With probability M mutation occurs. mutation is performed in 3 ways, with probability p and (1-p) The primary way, with probability p assigns all
 # blank cells a random letter. This encourages small (2-3) letter words to form which are common in crosswords and will increase the number of real words.
 # With probablity (1-p)/2, an entirely new word will be sampled from the lexicon and randomly placed. And with prob: (1-p)/2 both previous ways happen sequentially
-def mutate(array, gene,p, dict, seed=None,rng=None):
-    if rng is None:
+def mutate(array,p, dict, seed=None,rng=None):
+    if rng is None: # TODO replace random wth np random
         rng = default_rng(seed)
     sample = rng.uniform()
     if sample < p:
-        array = saturate(array)
-        return array,gene
+        array = saturate(array,rng)
+        return array
     sample = rng.uniform()
-    word = random.sample(dict,1)
-    dir = random.sample(["h","v"],1)
-    pos1 = rng.integers(0,len(array)-len(word))
+    word = rng.choice(list(dict.keys()),1).item()
+    dir = rng.choice(["h","v"],1).item()
+    pos1 = rng.integers(0,max(1,len(array)-len(word)))
     pos2 = rng.integers(0,len(array))
     if dir == "v":
         pos = (pos1,pos2)
     else:
         pos = (pos2,pos1)
     if sample < 0.5:
-        gene.append((word,pos,dir))
-        return array,gene
+        
+        return array
     else:
-        array = saturate(array)
-        gene.append((word,pos,dir))
-        return array,gene
+        array = saturate(array,rng)
+        array = insert_word(array,word,pos,dir)
+        return array
 
+def reconstruct(gene,size):
+    new_arr = np.zeros((size,size),dtype="object")
+    for i in range(len(new_arr)):
+        for j in range(len(new_arr)):
+            new_arr[i,j] = "%"
+    for w,pos,style in gene:
+        new_arr = insert_word(new_arr,w,pos,style)
+    return new_arr
 
-
-
-def saturate(array):
+def saturate(array,rng):
+    # TODO configure seed
     letters = list(string.ascii_lowercase)
     for i in range(len(array)):
         for j in range(len(array)):
             if not isinstance(array[(i,j)],str):
-                array[(i,j)] = random.sample(letters,1)[0]
+                array[(i,j)] = rng.choice(letters,1).item()
     return array
 
-t = np.zeros((5, 5), dtype=object)
-t[0, 0] = "a"
-t[1, 0] = "b"
-t[2, 0] = "i"
 
-t = insert_word(t, "test", (0, 1), "v")
-t = saturate(t)
-print(t)
-test_dict = {"test": 1, "at": 1, "be": 1, "is": 1,
-             "kiss": 1,
-             "could":1,
-             "sound":1
 
-}
-ws, ls, valid, state = score_encode(t, test_dict)
-print(f"Valid puzzle: {valid} Word score: {ws}, letter score: {ls}")
-print(state)
+def evolve(pop, p, word_dict, num_gens, arr_size, rng):
+    for i in range(num_gens):
+        print(f"Generation {i}")
+        pop = sorted(pop,key=lambda x: (x[1][0],x[1][1]),reverse=True)      
+        offspring = []
+        child_genes = []
+        for j in range(0, len(pop), 2):
+            parent1 = pop[j]
+            parent2 = pop[j + 1]
+            child1, child2 = crossover(parent1, parent2,rng)
+            offspring.append(reconstruct(child1,arr_size))
+            offspring.append(reconstruct(child2,arr_size))
+        for c in offspring:
+            c = mutate(c,p,word_dict,rng)
+            child_genes.append(encode_v2(c,word_dict))
+        pop = [(g,*score_gene(g)) for g in child_genes]
 
-h = np.zeros((5, 5), dtype=object)
-h = insert_word(h,"kiss",(0,1),"h")
-h = insert_word(h,"could",(4,0),"h")
-h = insert_word(h,"sound",(0,4),"v")
-h = saturate(h)
-print(h)
-ws, ls, valid, state = score_encode(h, test_dict)
-print(f"Valid puzzle: {valid} Word score: {ws}, letter score: {ls}")
-print(state)
+def gen_pop(word_dict, pop_size, crossword_size, seed=None,rng=None):
+    if rng is None: 
+        rng = default_rng(seed)
+    pop = [np.zeros((crossword_size,crossword_size),dtype="object") for i in range(pop_size)]
+    for ar in pop:
+        for i in range(len(ar)):
+            for j in range(len(ar)):
+                ar[i,j] = "%"
+        for k in range(crossword_size//2 + 1):
+            ar = mutate(ar,0,word_dict,seed=seed,rng=rng)
+    return pop
+
+
+unfiltered_wd = get_words(r"C:\Users\pjmcc\PycharmProjects\AI531_Final\words_dictionary.json")
+wd = filter_words(unfiltered_wd,5)
+
+rng = default_rng(1066)
+#initial pop
+pop_arrays = gen_pop(wd,6,5,rng)
+genes = [encode_v2(p,wd) for p in pop_arrays]
+pop = [(g,*score_gene(g)) for g in genes]
+#evolve
+evolve(genes,0.6,wd,20,5,rng)
+#results

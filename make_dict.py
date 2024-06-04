@@ -49,8 +49,8 @@ def main():
             print(f"i = {i}")
             exit(1)
 
-    with open(args.name + ".pickle", "wb") as file:
-        pickle.dump(subset, file)
+    with open(args.name + ".json", "wb") as file:
+        json.dump(subset, file)
 
 
 if __name__ == "__main__":
