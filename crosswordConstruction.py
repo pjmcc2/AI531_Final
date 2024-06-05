@@ -239,8 +239,7 @@ def gen_pop(word_dict, pop_size, crossword_size, seed=None,rng=None):
     return pop
 
 
-unfiltered_wd = get_words(r"C:\Users\pjmcc\PycharmProjects\AI531_Final\words_dictionary.json")
-wd = filter_words(unfiltered_wd,5)
+
 
 pop_sizes = [20,40,60]
 mutation_rates = [0,0.25,0.5,0.75,1]
@@ -249,37 +248,32 @@ num_runs = 10
 num_gens = 50
 # 10 runs
 
-for pop in pop_sizes:
+run_results = {}
+for grid_size in grid_sizes:
+    unfiltered_wd = get_words(r"C:\Users\pjmcc\PycharmProjects\AI531_Final\words_dictionary.json")
+    wd = filter_words(unfiltered_wd,grid_size)
     for rate in mutation_rates:
-        for grid_size in grid_sizes:
-            for i in range(num_runs):
+        for pop_size in pop_sizes:
+            for i in tqdm(range(num_runs)):
                 word_scores = []
                 letter_scores = []
-                params = {'pop': pop,
-                          "mutation":rate,
-                          "grid_size":grid_size,
-                          "num_gens":num_gens,
-                          }
                 for j in range(num_gens):
                     rng = default_rng(i)
                     #initial pop
-                    pop_arrays = gen_pop(wd,20,5,rng)
+                    pop_arrays = gen_pop(wd,pop_size,grid_size,rng)
                     genes = [encode_v2(p,wd) for p in pop_arrays]
                     pop = [(g,*score_gene(g)) for g in genes]
                     #evolve
-                    pop,scores = evolve(pop,0,wd,20,5,rng)
+                    pop,scores = evolve(pop,rate,wd,num_gens,grid_size,rng)
                     word_scores.append([s[0] for s in scores])
                     letter_scores.append([s[1] for s in scores])
                 #results
                 x = np.arange(20)
                 avg_ws = np.mean(np.array(word_scores),axis=0)
                 avg_ls = np.mean(np.array(letter_scores),axis=0)
-                params["word_score"] = avg_ws
-                params["letter_score"] = avg_ls
 
-plt.plot(x,avg_ws,label="Words")
-plt.plot(x, avg_ls,label = "Letters")
-plt.xlabel("Generations")
-plt.ylabel("Avg. Score")
-plt.legend()
-plt.show()
+                run_results[(pop_size,rate,grid_size)] = (avg_ws,avg_ls)
+
+out_file = "experiments_1.json"
+with open(out_file,"w") as file:
+    json.dump(run_results,out_file)
