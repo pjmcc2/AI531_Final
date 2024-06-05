@@ -1,9 +1,11 @@
 import pickle
 import numpy as np
-import random
+from operator import itemgetter
 import string
 import json
 from numpy.random import default_rng
+import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 def get_words(file):
     with open(file, "rb") as f:
@@ -111,13 +113,13 @@ def crossover(g1, g2,rng):
             cross1 = s
             break
     if cross1 is None:
-        cross1 = g1[rng.integers(0,len(g1))]
+        cross1 = g1[rng.integers(0,max(1,len(g1)))]
     for s in g2:
         if not check_conflict(g1, s):
             cross2 = s
             break
     if cross2 is None:
-        cross2 = g2[rng.integers(0,len(g2))]
+        cross2 = g2[rng.integers(0,max(1,len(g2)))]
     g2.append(cross1)
     g1.append(cross2)
 
@@ -155,23 +157,26 @@ def check_conflict(existing_triples, new_triple):
 # blank cells a random letter. This encourages small (2-3) letter words to form which are common in crosswords and will increase the number of real words.
 # With probablity (1-p)/2, an entirely new word will be sampled from the lexicon and randomly placed. And with prob: (1-p)/2 both previous ways happen sequentially
 def mutate(array,p, dict, seed=None,rng=None):
-    if rng is None: # TODO replace random wth np random
+    if rng is None:
         rng = default_rng(seed)
     sample = rng.uniform()
-    if sample < p:
-        array = saturate(array,rng)
+    if sample > p:
         return array
     sample = rng.uniform()
+
     word = rng.choice(list(dict.keys()),1).item()
     dir = rng.choice(["h","v"],1).item()
     pos1 = rng.integers(0,max(1,len(array)-len(word)))
     pos2 = rng.integers(0,len(array))
+    if sample < 0.5:
+        array = saturate(array,rng)
+        return array
     if dir == "v":
         pos = (pos1,pos2)
     else:
         pos = (pos2,pos1)
-    if sample < 0.5:
-        
+    if sample > 0.5 and sample < 0.75:
+        array = insert_word(array,word,pos,dir)
         return array
     else:
         array = saturate(array,rng)
@@ -188,32 +193,38 @@ def reconstruct(gene,size):
     return new_arr
 
 def saturate(array,rng):
-    # TODO configure seed
+
     letters = list(string.ascii_lowercase)
     for i in range(len(array)):
         for j in range(len(array)):
-            if not isinstance(array[(i,j)],str):
+            if array[(i,j)] == "%":
                 array[(i,j)] = rng.choice(letters,1).item()
     return array
 
 
-
 def evolve(pop, p, word_dict, num_gens, arr_size, rng):
+    scores = []
     for i in range(num_gens):
-        print(f"Generation {i}")
-        pop = sorted(pop,key=lambda x: (x[1][0],x[1][1]),reverse=True)      
+        
+        pop.sort(key=itemgetter(1,2),reverse=True)
+        scores.append((pop[0][1],pop[0][2]))
         offspring = []
         child_genes = []
         for j in range(0, len(pop), 2):
-            parent1 = pop[j]
-            parent2 = pop[j + 1]
+            parent1 = pop[j][0]
+            parent2 = pop[j + 1][0]
             child1, child2 = crossover(parent1, parent2,rng)
             offspring.append(reconstruct(child1,arr_size))
             offspring.append(reconstruct(child2,arr_size))
-        for c in offspring:
-            c = mutate(c,p,word_dict,rng)
-            child_genes.append(encode_v2(c,word_dict))
+        if i != num_gens-1:
+            for c in offspring:
+                c = mutate(c,p,word_dict,rng)
+                child_genes.append(encode_v2(c,word_dict))
+        if i == num_gens -1:
+            for o in offspring:
+                child_genes.append(encode_v2(o,word_dict))
         pop = [(g,*score_gene(g)) for g in child_genes]
+    return pop, scores
 
 def gen_pop(word_dict, pop_size, crossword_size, seed=None,rng=None):
     if rng is None: 
@@ -224,18 +235,51 @@ def gen_pop(word_dict, pop_size, crossword_size, seed=None,rng=None):
             for j in range(len(ar)):
                 ar[i,j] = "%"
         for k in range(crossword_size//2 + 1):
-            ar = mutate(ar,0,word_dict,seed=seed,rng=rng)
+            ar = mutate(ar,1,word_dict,seed=seed,rng=rng)
     return pop
 
 
 unfiltered_wd = get_words(r"C:\Users\pjmcc\PycharmProjects\AI531_Final\words_dictionary.json")
 wd = filter_words(unfiltered_wd,5)
 
-rng = default_rng(1066)
-#initial pop
-pop_arrays = gen_pop(wd,6,5,rng)
-genes = [encode_v2(p,wd) for p in pop_arrays]
-pop = [(g,*score_gene(g)) for g in genes]
-#evolve
-evolve(genes,0.6,wd,20,5,rng)
-#results
+pop_sizes = [20,40,60]
+mutation_rates = [0,0.25,0.5,0.75,1]
+grid_sizes = [5,7,10]
+num_runs = 10
+num_gens = 50
+# 10 runs
+
+for pop in pop_sizes:
+    for rate in mutation_rates:
+        for grid_size in grid_sizes:
+            for i in range(num_runs):
+                word_scores = []
+                letter_scores = []
+                params = {'pop': pop,
+                          "mutation":rate,
+                          "grid_size":grid_size,
+                          "num_gens":num_gens,
+                          }
+                for j in range(num_gens):
+                    rng = default_rng(i)
+                    #initial pop
+                    pop_arrays = gen_pop(wd,20,5,rng)
+                    genes = [encode_v2(p,wd) for p in pop_arrays]
+                    pop = [(g,*score_gene(g)) for g in genes]
+                    #evolve
+                    pop,scores = evolve(pop,0,wd,20,5,rng)
+                    word_scores.append([s[0] for s in scores])
+                    letter_scores.append([s[1] for s in scores])
+                #results
+                x = np.arange(20)
+                avg_ws = np.mean(np.array(word_scores),axis=0)
+                avg_ls = np.mean(np.array(letter_scores),axis=0)
+                params["word_score"] = avg_ws
+                params["letter_score"] = avg_ls
+
+plt.plot(x,avg_ws,label="Words")
+plt.plot(x, avg_ls,label = "Letters")
+plt.xlabel("Generations")
+plt.ylabel("Avg. Score")
+plt.legend()
+plt.show()
