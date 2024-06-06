@@ -276,4 +276,4 @@ for grid_size in grid_sizes:
 
 out_file = "experiments_1.json"
 with open(out_file,"w") as file:
-    json.dump(run_results,out_file)
+    json.dump(run_results,file)

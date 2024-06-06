@@ -65,16 +65,24 @@ def encode_list(char_string, word_dict):
     return valid_words
 
 
-def encode(arr,word_dict):
+def encode(arr,word_dict,fs):
     encoding = []
     for i,r in enumerate(arr):
         temp = encode_list(r, word_dict)
         for w,(start,end) in temp:
-            encoding.append((w,(i,start),'h',False))
+            s = {(i,start+j) for j in range(len(w))}
+            if s <= fs:
+                encoding.append((w,(i,start),'h',True))
+            else:
+                encoding.append((w,(i,start),'h', False))
     for j,c in enumerate(arr.T):
         temp = encode_list(c, word_dict)
         for w,(start,end) in temp:
-            encoding.append((w,(start,j),'v',False))
+            s = {(start+k,j) for k in range(len(w))}
+            if s <= fs:
+                encoding.append((w,(start,j),'v',True))
+            else:
+                encoding.append((w,(start,j),'v',False))
 
     return validate_words(arr,encoding)
     
@@ -147,8 +155,8 @@ def check_conflict(genes, new_gene):
 # blank cells a random letter. This encourages small (2-3) letter words to form which are common in crosswords and will increase the number of real words.
 # With probablity (1-p)/2, an entirely new word will be sampled from the lexicon and randomly placed. And with prob: (1-p)/2 both previous ways happen sequentially
 def mutate(array,p, seed=None,rng=None):
-    weights = [13/26/5,1/26,1/26,1/26,13/26/5,1/26,1/26,1/26,13/26/5,1/26,1/26,1/26,1/26,1/26,13/26/5,1/26,1/26,1/26,1/26,1/26,13/26/5,1/26,1/26,1/26,1/26,1/26]
-    weights = weights/np.linalg.norm(weights)
+    weights = [1/10,1/42,1/42,1/42,1/10,1/42,1/42,1/42,1/10,1/42,1/42,1/42,1/42,1/42,1/10,1/42,1/42,1/42,1/42,1/42,1/10,1/42,1/42,1/42,1/42,1/42]
+ 
     if rng is None:
         rng = default_rng(seed)
     sample = rng.uniform()
@@ -157,14 +165,14 @@ def mutate(array,p, seed=None,rng=None):
     for i in range(len(array)):
         for j in range(len(array)):
             if array[i,j] not in string.ascii_lowercase:
-                array[i,j] = rng.choice(string.ascii_lowercase,1,p=weights)
+                array[i,j] = rng.choice(list(string.ascii_lowercase),1,p=weights).item()
     return array
 def reconstruct(gene,size):
     new_arr = np.zeros((size,size),dtype="object")
     for i in range(len(new_arr)):
         for j in range(len(new_arr)):
             new_arr[i,j] = "%"
-    for w,pos,style in gene:
+    for w,pos,style,_ in gene:
         new_arr = insert_word(new_arr,w,pos,style)
     return new_arr
 
@@ -190,15 +198,15 @@ def evolve(pop, p, word_dict, num_gens, arr_size, rng):
             parent1 = reconstruct(pop[j][0], arr_size)
             parent2 = reconstruct(pop[j + 1][0],arr_size)
             child1, child2 = crossover(parent1, parent2,pop[j][1],pop[j + 1][1])
-            offspring.append(child1)
-            offspring.append(child2)
+            offspring.append((child1,pop[j][1]))
+            offspring.append((child2,pop[j+1][1]))
         if i != num_gens-1:
-            for c in offspring:
+            for c,fs in offspring:
                 c = mutate(c,p,rng)
-                child_genes.append(encode(c,word_dict))
+                child_genes.append(encode(c,word_dict,fs))
         if i == num_gens -1:
-            for o in offspring:
-                child_genes.append(encode(o,word_dict))
+            for o,fs in offspring:
+                child_genes.append(encode(o,word_dict,fs))
         pop = [(g[0],g[1],*score_gene(g[0])) for g in child_genes]
     return pop, scores
 
@@ -210,16 +218,16 @@ def gen_pop(word_dict, pop_size, crossword_size, seed=None,rng=None):
         for i in range(len(ar)):
             for j in range(len(ar)):
                 ar[i,j] = "%"
-        for k in range(crossword_size//2 + 1):
-            word = rng.choice(word_dict.keys())
-            direction = rng.choice(["h","v"])
-            pos1 = rng.integers(0,max(1,crossword_size-len(word)))
-            pos2 = rng.integers(0,crossword_size)
-            if direction == "h":
-                pos = (pos2,pos1)
-            else:
-                pos = (pos1,pos2)
-            ar = insert_word(ar,word,pos,direction)
+    
+        word = rng.choice(list(word_dict.keys()))
+        direction = rng.choice(["h","v"])
+        pos1 = rng.integers(0,max(1,crossword_size-len(word)))
+        pos2 = rng.integers(0,crossword_size)
+        if direction == "h":
+            pos = (pos2,pos1)
+        else:
+            pos = (pos1,pos2)
+        ar = insert_word(ar,word,pos,direction)
     return pop
 
 
@@ -283,30 +291,55 @@ def validate_words(arr,genes):
                                 break
                 if i == len(word) - 1:
                     out_genes.append((word,(row,col),direction,True))
+    for gene in out_genes:
+        word, (row, col), direction, fixed = gene
+        if fixed:
+            for k in range(len(word)):
+                if direction == 'h':
+                    fixed_cells.add((row, col+k))
+                else:
+                    fixed_cells.add((row+k, col))
     return out_genes, fixed_cells
 
 
-grid_size = 5
-pop_size = 10
-rate = 0.5
-num_gens = 20
 
-unfiltered_wd = get_words("words_dictionary.json")
-wd = filter_words(unfiltered_wd,grid_size)
 
-word_scores = []
-letter_scores = []
-for j in range(num_gens):
-    rng = default_rng(1066)
-    #initial pop
-    pop_arrays = gen_pop(wd,pop_size,grid_size,rng)
-    genes_and_fixed_sets = [encode(p,wd) for p in pop_arrays]
-    pop = [(g[0],g[1],*score_gene(g[0])) for g in genes_and_fixed_sets]
-    #evolve
-    pop,scores = evolve(pop,rate,wd,num_gens,grid_size,rng)
-    word_scores.append([s[0] for s in scores])
-    letter_scores.append([s[1] for s in scores])
-#results
-x = np.arange(20)
-avg_ws = np.mean(np.array(word_scores),axis=0)
-avg_ls = np.mean(np.array(letter_scores),axis=0)
+
+
+
+pop_sizes = [20,40,60]
+mutation_rates = [0,0.5,1]
+grid_sizes = [5,7,10]
+num_runs = 5
+num_gens = 10
+# 5 runs
+
+run_results = {}
+for grid_size in grid_sizes:
+    unfiltered_wd = get_words(r"C:\Users\pjmcc\PycharmProjects\AI531_Final\words_dictionary.json")
+    wd = filter_words(unfiltered_wd,grid_size)
+    for rate in mutation_rates:
+        for pop_size in pop_sizes:
+            for i in tqdm(range(num_runs)):
+                word_scores = []
+                letter_scores = []
+                for j in range(num_runs):
+                    rng = default_rng(j)
+                    #initial pop
+                    pop_arrays = gen_pop(wd,pop_size,grid_size,rng)
+                    genes_and_fixed_sets = [encode(p,wd,set()) for p in pop_arrays]
+                    pop = [(g[0],g[1],*score_gene(g[0])) for g in genes_and_fixed_sets]
+                    #evolve
+                    pop,scores = evolve(pop,rate,wd,num_gens,grid_size,rng)
+                    word_scores.append([s[0] for s in scores])
+                    letter_scores.append([s[1] for s in scores])
+                #results
+                x = np.arange(20)
+                avg_ws = np.mean(np.array(word_scores),axis=0)
+                avg_ls = np.mean(np.array(letter_scores),axis=0)
+
+                run_results[(pop_size,rate,grid_size)] = (avg_ws,avg_ls)
+
+out_file = "GA_2_short.json"
+with open(out_file,"w") as file:
+    json.dump(run_results,file)
