@@ -242,10 +242,10 @@ def gen_pop(word_dict, pop_size, crossword_size, seed=None,rng=None):
 
 
 pop_sizes = [20,40,60]
-mutation_rates = [0,0.25,0.5,0.75,1]
+mutation_rates = [0,0.5,1]
 grid_sizes = [5,7,10]
-num_runs = 10
-num_gens = 50
+num_runs = 5
+num_gens = 10
 # 10 runs
 
 run_results = {}
@@ -274,6 +274,6 @@ for grid_size in grid_sizes:
 
                 run_results[(pop_size,rate,grid_size)] = (avg_ws,avg_ls)
 
-out_file = "experiments_1.json"
+out_file = "GA_1_small.json"
 with open(out_file,"w") as file:
     json.dump(run_results,file)
