@@ -274,6 +274,6 @@ for grid_size in grid_sizes:
 
                 run_results[(pop_size,rate,grid_size)] = (avg_ws,avg_ls)
 
-out_file = "GA_1_small.json"
-with open(out_file,"w") as file:
-    json.dump(run_results,file)
+out_file = "GA_1_small.pickle"
+with open(out_file,"wb") as file:
+    pickle.dump(run_results,file)
