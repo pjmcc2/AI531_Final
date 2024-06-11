@@ -241,10 +241,10 @@ def gen_pop(word_dict, pop_size, crossword_size, seed=None,rng=None):
 
 
 
-pop_sizes = [20,40,60]
-mutation_rates = [0,0.5,1]
-grid_sizes = [5,7,10]
-num_runs = 5
+pop_sizes = [20] # 60
+mutation_rates = [0.5] # 1
+grid_sizes = [5] # 10
+num_runs = 1
 num_gens = 10
 # 10 runs
 
@@ -273,7 +273,7 @@ for grid_size in grid_sizes:
                 avg_ls = np.mean(np.array(letter_scores),axis=0)
 
                 run_results[(pop_size,rate,grid_size)] = (avg_ws,avg_ls)
-
-out_file = "GA_1_small.pickle"
+print(reconstruct(pop[0][0],5))
+out_file = "GA_1_small_TEST.pickle"
 with open(out_file,"wb") as file:
     pickle.dump(run_results,file)

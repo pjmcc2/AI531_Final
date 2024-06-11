@@ -307,10 +307,10 @@ def validate_words(arr,genes):
 
 
 
-pop_sizes = [20,40,60]
-mutation_rates = [0,0.5,1]
-grid_sizes = [5,7,10]
-num_runs = 5
+pop_sizes = [20]
+mutation_rates = [0.5]
+grid_sizes = [5]
+num_runs = 1
 num_gens = 10
 # 5 runs
 
@@ -339,6 +339,7 @@ for grid_size in grid_sizes:
                 avg_ls = np.mean(np.array(letter_scores),axis=0)
 
                 run_results[(pop_size,rate,grid_size)] = (avg_ws,avg_ls)
+print(reconstruct(pop[0][0],5))
 
 out_file = "GA_2_short.pickle"
 with open(out_file,"wb") as file:
