@@ -9,6 +9,7 @@ from copy import deepcopy
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import seaborn as sns
+from datetime import datetime
 
 
 def objective(arr,wd,v=1,noise=None,rng=None): # TODO add noise
@@ -182,8 +183,11 @@ def sim_anneal(arr,word_dict,num_iters, num_steps,init_temp, rng, obj_version=1,
     # 1. recieve init Solution
     if threshold is None:
         thresh = np.NINF
-    t_range = np.arange(init_temp,0,-init_temp/(0.75*num_iters)).round(2)
-    t_range = np.pad(t_range,(0,num_iters-len(t_range)))    
+    if init_temp != 0:
+        t_range = np.arange(init_temp,0,-init_temp/(0.75*num_iters)).round(2)
+        t_range = np.pad(t_range,(0,num_iters-len(t_range))) 
+    else:
+        t_range = np.zeros(num_iters)  
     curr_sol= arr
     
     _, curr_score = objective(curr_sol,word_dict,v=obj_version,noise=noise_eps,rng=rng)
@@ -224,23 +228,33 @@ def gen_init_puzzle(size,w_dict,rng):
     puzz = insert_word(puzz,seed_word,pos,dir)
     return puzz
 
-rng = default_rng()
 
-grid_size = 5
-num_iters = 10
-num_steps = 500
-backwards_prob = 0.05
-init_temp = 30
-min_word_length=2
+if __name__ == "__main__":
 
-wd = get_words("words_dictionary.json")
-wd = filter_words(wd, grid_size, min_word_length)
+    
 
-init_state = gen_init_puzzle(grid_size,wd,rng)
-print(init_state)
-out_state, scores = sim_anneal(init_state,wd,num_iters,num_steps,init_temp,rng)
-print(out_state)
+    grid_size = [5,7,10]
+    num_iters = 10
+    num_steps = [20,60]
+    backwards_prob = 0.05
+    init_temp = [0,30]
+    min_word_length=2
+    v=[1,2]
+    run_results = {}
+    for size in grid_size:
+        wd = get_words("words_dictionary.json")
+        wd = filter_words(wd, size, min_word_length)
+        for num_step in num_steps:
+            for temp in init_temp:
+                for vers in v:
+                    rng = default_rng()
+                                    
+                    init_state = gen_init_puzzle(size,wd,rng)
+                    #start = datetime.now()
+                    out_state, scores = sim_anneal(init_state,wd,num_iters,num_step,temp,rng,obj_version=vers)
+                    #end = datetime.now()
+                    run_results[(size,num_step,temp,vers)] = scores
 
-sns.lineplot(x=np.arange(len(scores)),y=scores)
-plt.show()
-pass
+    out_file = "SA.pickle"
+    with open(out_file,"wb") as file:
+        pickle.dump(run_results,file)
