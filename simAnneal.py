@@ -258,8 +258,8 @@ if __name__ == "__main__":
                         out_state, scores = sim_anneal(init_state,wd,num_iters,num_step,temp,rng,obj_version=vers,cool=cool)
                         #end = datetime.now()
                         scores_list.append(scores)
-                    run_results[(size)] = np.mean(scores_list,axis=1)
+                    run_results[(size,num_step,temp,vers)] = np.mean(scores_list,axis=0)
 
-    out_file = "SA_times.pickle"
+    out_file = "SA.pickle"
     with open(out_file,"wb") as file:
         pickle.dump(run_results,file)

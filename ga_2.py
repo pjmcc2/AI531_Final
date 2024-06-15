@@ -316,7 +316,7 @@ num_gens = 10
 
 run_results = {}
 for grid_size in grid_sizes:
-    unfiltered_wd = get_words(r"C:\Users\pjmcc\PycharmProjects\AI531_Final\words_dictionary.json")
+    unfiltered_wd = get_words(r"words_dictionary.json")
     wd = filter_words(unfiltered_wd,grid_size)
     for rate in mutation_rates:
         for pop_size in pop_sizes:
