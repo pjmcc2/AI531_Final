@@ -237,24 +237,29 @@ if __name__ == "__main__":
     num_iters = 10
     num_steps = [20,60]
     backwards_prob = 0.05
-    init_temp = [0,30]
+    init_temp = [0,15,30]
     min_word_length=2
     v=[1,2]
     run_results = {}
+    
+   
     for size in grid_size:
         wd = get_words("words_dictionary.json")
         wd = filter_words(wd, size, min_word_length)
         for num_step in num_steps:
             for temp in init_temp:
                 for vers in v:
-                    rng = default_rng()
-                                    
-                    init_state = gen_init_puzzle(size,wd,rng)
-                    #start = datetime.now()
-                    out_state, scores = sim_anneal(init_state,wd,num_iters,num_step,temp,rng,obj_version=vers)
-                    #end = datetime.now()
-                    run_results[(size,num_step,temp,vers)] = scores
+                    scores_list = []
+                    for i in range(5):
+                        rng = default_rng(i)
+                                        
+                        init_state = gen_init_puzzle(size,wd,rng)
+                        #start = datetime.now()
+                        out_state, scores = sim_anneal(init_state,wd,num_iters,num_step,temp,rng,obj_version=vers)
+                        #end = datetime.now()
+                        scores_list.append(scores)
+                    run_results[(size,num_step,temp,vers)] = np.mean(scores_list,axis=1)
 
-    out_file = "SA.pickle"
+    out_file = "test.pickle"
     with open(out_file,"wb") as file:
         pickle.dump(run_results,file)
