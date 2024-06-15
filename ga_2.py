@@ -348,6 +348,6 @@ for grid_size in grid_sizes:
             run_results[rate] = (avg_ws,avg_ls)
 
 
-out_file = "GA_2_no_crossover.pickle"
+out_file = "GA_2.pickle"
 with open(out_file,"wb") as file:
     pickle.dump(run_results,file)

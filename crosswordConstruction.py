@@ -214,11 +214,11 @@ def evolve(pop, p, word_dict, num_gens, arr_size, rng):
         for j in range(0, len(pop), 2):
             parent1 = pop[j][0]
             parent2 = pop[j + 1][0]
-            #child1, child2 = crossover(parent1, parent2,rng)
-            #offspring.append(reconstruct(child1,arr_size))
-            #offspring.append(reconstruct(child2,arr_size))
-            offspring.append(reconstruct(parent1,arr_size))
-            offspring.append(reconstruct(parent2,arr_size))            
+            child1, child2 = crossover(parent1, parent2,rng)
+            offspring.append(reconstruct(child1,arr_size))
+            offspring.append(reconstruct(child2,arr_size))
+            #offspring.append(reconstruct(parent1,arr_size))
+            #offspring.append(reconstruct(parent2,arr_size))            
         if i != num_gens-1:
             for c in offspring:
                 c = mutate(c,p,word_dict,rng)

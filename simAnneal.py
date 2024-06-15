@@ -237,11 +237,11 @@ if __name__ == "__main__":
     num_iters = 10
     num_steps = [20,60]
     backwards_prob = 0.05
-    init_temp = [1]
+    init_temp = [30]
     min_word_length=2
     v=[1,2]
     run_results = {}
-    cool = False
+    cool = True
    
     for size in grid_size:
         wd = get_words("words_dictionary.json")
@@ -261,6 +261,6 @@ if __name__ == "__main__":
                         scores_list.append(scores)
                     run_results[(size,num_step,temp,vers)] = np.mean(scores_list,axis=0)
 
-    out_file = "SA_no_temp.pickle"
+    out_file = "SA.pickle"
     with open(out_file,"wb") as file:
         pickle.dump(run_results,file)
