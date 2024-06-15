@@ -260,6 +260,6 @@ if __name__ == "__main__":
                         scores_list.append(scores)
                     run_results[(size,num_step,temp,vers)] = np.mean(scores_list,axis=1)
 
-    out_file = "test.pickle"
+    out_file = "SA.pickle"
     with open(out_file,"wb") as file:
         pickle.dump(run_results,file)
