@@ -213,9 +213,11 @@ def evolve(pop, p, word_dict, num_gens, arr_size, rng):
         for j in range(0, len(pop), 2):
             parent1 = pop[j][0]
             parent2 = pop[j + 1][0]
-            child1, child2 = crossover(parent1, parent2,rng)
-            offspring.append(reconstruct(child1,arr_size))
-            offspring.append(reconstruct(child2,arr_size))
+            #child1, child2 = crossover(parent1, parent2,rng)
+            #offspring.append(reconstruct(child1,arr_size))
+            #offspring.append(reconstruct(child2,arr_size))
+            offspring.append(reconstruct(parent1,arr_size))
+            offspring.append(reconstruct(parent2,arr_size))            
         if i != num_gens-1:
             for c in offspring:
                 c = mutate(c,p,word_dict,rng)
@@ -274,6 +276,6 @@ if __name__ == "__main__":
 
                     run_results[(pop_size,rate,grid_size)] = (avg_ws,avg_ls)
     print(reconstruct(pop[0][0],5))
-    out_file = "GA_1_no_2_lts.pickle"
+    out_file = "GA_1_no_2_crossover.pickle"
     with open(out_file,"wb") as file:
         pickle.dump(run_results,file)
