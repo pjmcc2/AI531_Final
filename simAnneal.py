@@ -178,16 +178,16 @@ def find_contiguous_strings(arr,wd=None):
 
     return contiguous_strings
 
-def sim_anneal(arr,word_dict,num_iters, num_steps,init_temp, rng, obj_version=1,backwards_prob=0.05,threshold=None,beam_size=1,noise_eps=None):
+def sim_anneal(arr,word_dict,num_iters, num_steps,init_temp, rng, obj_version=1,backwards_prob=0.05,threshold=None,beam_size=1,noise_eps=None,cool=True):
     """simulated annealing process"""
     # 1. recieve init Solution
     if threshold is None:
         thresh = np.NINF
-    if init_temp != 0:
+    if init_temp > 1 and cool:
         t_range = np.arange(init_temp,0,-init_temp/(0.75*num_iters)).round(2)
         t_range = np.pad(t_range,(0,num_iters-len(t_range))) 
     else:
-        t_range = np.zeros(num_iters)  
+        t_range = [init_temp for i in range(num_iters)]  
     curr_sol= arr
     
     _, curr_score = objective(curr_sol,word_dict,v=obj_version,noise=noise_eps,rng=rng)
@@ -260,6 +260,6 @@ if __name__ == "__main__":
                         scores_list.append(scores)
                     run_results[(size,num_step,temp,vers)] = np.mean(scores_list,axis=1)
 
-    out_file = "SA.pickle"
+    out_file = "SA_17x.pickle"
     with open(out_file,"wb") as file:
         pickle.dump(run_results,file)
