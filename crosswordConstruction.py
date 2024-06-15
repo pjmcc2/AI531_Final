@@ -6,6 +6,7 @@ import json
 from numpy.random import default_rng
 #import matplotlib.pyplot as plt
 from tqdm import tqdm
+from datetime import datetime
 
 def get_words(file):
     with open(file, "rb") as f:
@@ -243,9 +244,9 @@ def gen_pop(word_dict, pop_size, crossword_size, seed=None,rng=None):
 
 
 if __name__ == "__main__":
-    pop_sizes = [20,60] # 60
-    mutation_rates = [0,0.5,1] # 1
-    grid_sizes = [5,7,10] # 10
+    pop_sizes = [20] # 60
+    mutation_rates = [0.5,1] # 1
+    grid_sizes = [10] # 10
     num_runs = 5
     num_gens = 10
     # 10 runs
@@ -256,26 +257,29 @@ if __name__ == "__main__":
         wd = filter_words(unfiltered_wd,grid_size)
         for rate in mutation_rates:
             for pop_size in pop_sizes:
+                word_scores = []
+                letter_scores = []
                 for i in tqdm(range(num_runs)):
-                    word_scores = []
-                    letter_scores = []
-                    for j in range(num_gens):
-                        rng = default_rng(i)
-                        #initial pop
-                        pop_arrays = gen_pop(wd,pop_size,grid_size,rng)
-                        genes = [encode_v2(p,wd) for p in pop_arrays]
-                        pop = [(g,*score_gene(g)) for g in genes]
-                        #evolve
-                        pop,scores = evolve(pop,rate,wd,num_gens,grid_size,rng)
-                        word_scores.append([s[0] for s in scores])
-                        letter_scores.append([s[1] for s in scores])
+                    
+                
+                    rng = default_rng(i)
+                    #initial pop
+                    pop_arrays = gen_pop(wd,pop_size,grid_size,rng)
+                    genes = [encode_v2(p,wd) for p in pop_arrays]
+                    pop = [(g,*score_gene(g)) for g in genes]
+                    #evolve
+                    #start = datetime.now()
+                    pop,scores = evolve(pop,rate,wd,num_gens,grid_size,rng)
+                    #end = datetime.now()
+                    word_scores.append([s[0] for s in scores])
+                    letter_scores.append([s[1] for s in scores])
                     #results
-                    x = np.arange(20)
-                    avg_ws = np.mean(np.array(word_scores),axis=0)
-                    avg_ls = np.mean(np.array(letter_scores),axis=0)
+                    
+                avg_ws = np.mean(np.array(word_scores),axis=0)
+                avg_ls = np.mean(np.array(letter_scores),axis=0)
 
-                    run_results[(pop_size,rate,grid_size)] = (avg_ws,avg_ls)
-    print(reconstruct(pop[0][0],5))
-    out_file = "GA_1_no_2_crossover.pickle"
+                run_results[rate] = (avg_ws,avg_ls)
+    
+    out_file = "GA_1_no_crossover.pickle"
     with open(out_file,"wb") as file:
         pickle.dump(run_results,file)

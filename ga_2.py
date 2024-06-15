@@ -6,6 +6,7 @@ import json
 from numpy.random import default_rng
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from datetime import datetime
 
 def get_words(file):
     with open(file, "rb") as f:
@@ -14,7 +15,7 @@ def get_words(file):
 
 
 def filter_words(words, length):
-    return {w:1 for w in words.keys() if (len(w) <= length) and (len(w) > 2)}
+    return {w:1 for w in words.keys() if (len(w) <= length) and (len(w) > 1)}
 
 
 def insert_word(array, word, position, direction):
@@ -198,8 +199,8 @@ def evolve(pop, p, word_dict, num_gens, arr_size, rng):
         for j in range(0, len(pop), 2):
             parent1 = reconstruct(pop[j][0], arr_size)
             parent2 = reconstruct(pop[j + 1][0],arr_size)
-            #child1, child2 = crossover(parent1, parent2,pop[j][1],pop[j + 1][1])
-            child1,child2 = parent1,parent2
+            child1, child2 = crossover(parent1, parent2,pop[j][1],pop[j + 1][1])
+            #child1,child2 = parent1,parent2
             offspring.append((child1,pop[j][1]))
             offspring.append((child2,pop[j+1][1]))
         if i != num_gens-1:
@@ -311,8 +312,8 @@ def validate_words(arr,genes):
 
 pop_sizes = [20]
 mutation_rates = [0.5,1]
-grid_sizes = [5,7,10]
-num_runs = 1
+grid_sizes = [10,]
+num_runs = 5
 num_gens = 10
 # 5 runs
 
@@ -322,26 +323,30 @@ for grid_size in grid_sizes:
     wd = filter_words(unfiltered_wd,grid_size)
     for rate in mutation_rates:
         for pop_size in pop_sizes:
+            word_scores = []
+            letter_scores = []
+           
             for i in tqdm(range(num_runs)):
-                word_scores = []
-                letter_scores = []
-                for j in range(num_runs):
-                    rng = default_rng(j)
-                    #initial pop
-                    pop_arrays = gen_pop(wd,pop_size,grid_size,rng)
-                    genes_and_fixed_sets = [encode(p,wd,set()) for p in pop_arrays]
-                    pop = [(g[0],g[1],*score_gene(g[0])) for g in genes_and_fixed_sets]
-                    #evolve
-                    pop,scores = evolve(pop,rate,wd,num_gens,grid_size,rng)
-                    word_scores.append([s[0] for s in scores])
-                    letter_scores.append([s[1] for s in scores])
-                #results
-                x = np.arange(20)
-                avg_ws = np.mean(np.array(word_scores),axis=0)
-                avg_ls = np.mean(np.array(letter_scores),axis=0)
+               
+                rng = default_rng(i+100)
+                #initial pop
+                pop_arrays = gen_pop(wd,pop_size,grid_size,rng)
+                genes_and_fixed_sets = [encode(p,wd,set()) for p in pop_arrays]
+                pop = [(g[0],g[1],*score_gene(g[0])) for g in genes_and_fixed_sets]
+                #evolve
+                start = datetime.now()
+                pop,scores = evolve(pop,rate,wd,num_gens,grid_size,rng)
+                end = datetime.now()
+                word_scores.append([s[0] for s in scores])
+                letter_scores.append([s[1] for s in scores])
+                
+            #results
+            x = np.arange(20)
+            avg_ws = np.mean(np.array(word_scores),axis=0)
+            avg_ls = np.mean(np.array(letter_scores),axis=0)
 
-                run_results[(pop_size,rate,grid_size)] = (avg_ws,avg_ls)
-print(reconstruct(pop[0][0],5))
+            run_results[rate] = (avg_ws,avg_ls)
+
 
 out_file = "GA_2_no_crossover.pickle"
 with open(out_file,"wb") as file:
