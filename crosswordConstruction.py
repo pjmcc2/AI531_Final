@@ -13,7 +13,7 @@ def get_words(file):
     return word_list
 
 
-def filter_words(words, length,min=1):
+def filter_words(words, length,min=3):
     return {w:1 for w in words.keys() if (len(w) <= length) and (len(w) >= min)}
 
 
@@ -241,16 +241,16 @@ def gen_pop(word_dict, pop_size, crossword_size, seed=None,rng=None):
 
 
 if __name__ == "__main__":
-    pop_sizes = [20] # 60
-    mutation_rates = [0.5] # 1
-    grid_sizes = [5] # 10
-    num_runs = 1
+    pop_sizes = [20,60] # 60
+    mutation_rates = [0,0.5,1] # 1
+    grid_sizes = [5,7,10] # 10
+    num_runs = 5
     num_gens = 10
     # 10 runs
 
     run_results = {}
     for grid_size in grid_sizes:
-        unfiltered_wd = get_words(r"C:\Users\pjmcc\PycharmProjects\AI531_Final\words_dictionary.json")
+        unfiltered_wd = get_words(r"words_dictionary.json")
         wd = filter_words(unfiltered_wd,grid_size)
         for rate in mutation_rates:
             for pop_size in pop_sizes:
@@ -274,6 +274,6 @@ if __name__ == "__main__":
 
                     run_results[(pop_size,rate,grid_size)] = (avg_ws,avg_ls)
     print(reconstruct(pop[0][0],5))
-    out_file = "GA_1_small_TEST.pickle"
+    out_file = "GA_1_no_2_lts.pickle"
     with open(out_file,"wb") as file:
         pickle.dump(run_results,file)

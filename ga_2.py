@@ -14,7 +14,7 @@ def get_words(file):
 
 
 def filter_words(words, length):
-    return {w:1 for w in words.keys() if (len(w) <= length) and (len(w) > 1)}
+    return {w:1 for w in words.keys() if (len(w) <= length) and (len(w) > 2)}
 
 
 def insert_word(array, word, position, direction):
@@ -307,9 +307,9 @@ def validate_words(arr,genes):
 
 
 
-pop_sizes = [20]
-mutation_rates = [0.5]
-grid_sizes = [5]
+pop_sizes = [20,60]
+mutation_rates = [0,0.5,1]
+grid_sizes = [5,7,10]
 num_runs = 1
 num_gens = 10
 # 5 runs
@@ -341,6 +341,6 @@ for grid_size in grid_sizes:
                 run_results[(pop_size,rate,grid_size)] = (avg_ws,avg_ls)
 print(reconstruct(pop[0][0],5))
 
-out_file = "GA_2_short.pickle"
+out_file = "GA_2_no_2_letter.pickle"
 with open(out_file,"wb") as file:
     pickle.dump(run_results,file)
