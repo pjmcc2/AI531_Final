@@ -237,7 +237,7 @@ if __name__ == "__main__":
     num_iters = 10
     num_steps = [20,60]
     backwards_prob = 0.05
-    init_temp = [0,15,30]
+    init_temp = [1]
     min_word_length=2
     v=[1,2]
     run_results = {}
@@ -260,6 +260,6 @@ if __name__ == "__main__":
                         scores_list.append(scores)
                     run_results[(size,num_step,temp,vers)] = np.mean(scores_list,axis=1)
 
-    out_file = "SA_17x.pickle"
+    out_file = "SA_no_cooling.pickle"
     with open(out_file,"wb") as file:
         pickle.dump(run_results,file)
