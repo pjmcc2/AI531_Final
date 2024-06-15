@@ -167,6 +167,7 @@ def mutate(array,p, seed=None,rng=None):
             if array[i,j] not in string.ascii_lowercase:
                 array[i,j] = rng.choice(list(string.ascii_lowercase),1,p=weights).item()
     return array
+
 def reconstruct(gene,size):
     new_arr = np.zeros((size,size),dtype="object")
     for i in range(len(new_arr)):
@@ -197,7 +198,8 @@ def evolve(pop, p, word_dict, num_gens, arr_size, rng):
         for j in range(0, len(pop), 2):
             parent1 = reconstruct(pop[j][0], arr_size)
             parent2 = reconstruct(pop[j + 1][0],arr_size)
-            child1, child2 = crossover(parent1, parent2,pop[j][1],pop[j + 1][1])
+            #child1, child2 = crossover(parent1, parent2,pop[j][1],pop[j + 1][1])
+            child1,child2 = parent1,parent2
             offspring.append((child1,pop[j][1]))
             offspring.append((child2,pop[j+1][1]))
         if i != num_gens-1:
@@ -307,8 +309,8 @@ def validate_words(arr,genes):
 
 
 
-pop_sizes = [20,60]
-mutation_rates = [0,0.5,1]
+pop_sizes = [20]
+mutation_rates = [0.5,1]
 grid_sizes = [5,7,10]
 num_runs = 1
 num_gens = 10
@@ -341,6 +343,6 @@ for grid_size in grid_sizes:
                 run_results[(pop_size,rate,grid_size)] = (avg_ws,avg_ls)
 print(reconstruct(pop[0][0],5))
 
-out_file = "GA_2_no_2_letter.pickle"
+out_file = "GA_2_no_crossover.pickle"
 with open(out_file,"wb") as file:
     pickle.dump(run_results,file)
